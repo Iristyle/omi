@@ -36,9 +36,9 @@
 #include <pal/strings.h>
 #include <pal/format.h>
 
-//#define ENABLE_TRACING 1
+#define ENABLE_TRACING 1
 #ifdef ENABLE_TRACING
-//# define TRACING_LEVEL 4
+# define TRACING_LEVEL 4
 #include <base/result.h>
 #include <base/logbase.h>
 #include <base/log.h>
@@ -337,6 +337,7 @@ MI_Result Sock_Read(
 {
     int n;
 
+    trace_HTTP_SupplimentaryInfo("ethan entering Sock_Read");
     LOGD2((ZT("Sock_Read - Begin. socket: %d, size: %u"), (int)self, (unsigned int)size));
 
     *sizeRead = 0;
@@ -350,6 +351,7 @@ MI_Result Sock_Read(
         {
             *sizeRead = n;
             LOGD2((ZT("Sock_Read - OK exit. %d bytes read"), n));
+	    /* this is where things are getting weird */
             return MI_RESULT_OK;
         }
 
@@ -374,6 +376,7 @@ MI_Result Sock_Read(
 
     LOGE2((ZT("Sock_Read - _Read failed with errno: %d (%s)"), errno, strerror(errno)));
 
+    trace_HTTP_SupplimentaryInfo("ethan leaving Sock_Read with MI_RESULT_FAILED");
     return MI_RESULT_FAILED;
 }
 

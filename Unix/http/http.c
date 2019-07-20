@@ -259,8 +259,13 @@ static MI_Result _Sock_ReadAux(
 {
     int res;
 
+    trace_HTTP_SupplimentaryInfo("ethan _Sock_ReadAux entered");
+
     if (!handler->ssl)
+    {
+        trace_HTTP_SupplimentaryInfo("ethan _Sock_ReadAux calling Sock_Read");
         return Sock_Read(handler->handler.sock, buf, buf_size, sizeRead);
+    }
 
     handler->handler.mask &= ~SELECTOR_WRITE;
     handler->handler.mask |= SELECTOR_READ;
@@ -270,6 +275,7 @@ static MI_Result _Sock_ReadAux(
 
     if (handler->acceptDone)
     {
+        trace_HTTP_SupplimentaryInfo("ethan _Sock_ReadAux calling SSL_read");
         res = SSL_read(handler->ssl, buf, buf_size);
     }
     else
@@ -284,6 +290,7 @@ static MI_Result _Sock_ReadAux(
         }
         else
         {
+            trace_HTTP_SupplimentaryInfo("ethan _Sock_ReadAux SSL error of some kind");
             SSL_load_error_strings(); // registers the error strings for all libcrypto and libssl functions.
             SSL_get_error(handler->ssl, res);
         }
@@ -291,10 +298,14 @@ static MI_Result _Sock_ReadAux(
     }
 
     if ( res == 0 )
+    {
+        trace_HTTP_SupplimentaryInfo("ethan _Sock_ReadAux connection closed ?!");
         return MI_RESULT_OK;    /* connection closed */
+    }
 
     if ( res > 0 )
     {
+        trace_HTTP_SupplimentaryInfo("ethan _Sock_ReadAux res > 0 ??");
         *sizeRead = res;
         return MI_RESULT_OK;    /* ok */
     }
@@ -475,6 +486,7 @@ static Http_CallbackResult _ReadHeader(
     MI_Result r;
     MI_Boolean fullHeaderReceived = MI_FALSE;
 
+    trace_HTTP_SupplimentaryInfo("ethan entering _ReadHeader");
     /* are we done with header? */
     if (handler->recvingState == RECV_STATE_CONTENT)
         return PRT_CONTINUE;
@@ -486,10 +498,17 @@ static Http_CallbackResult _ReadHeader(
     r = _Sock_Read(handler, buf, buf_size, &received);
 
     if ( r == MI_RESULT_OK && 0 == received )
+    {
+	// TODO: it appears that Sock_Read returns MI_RESULT_OK here ... are the bytes not coming through??
+        trace_HTTP_SupplimentaryInfo("ethan _ReadHeader connection closed - WTF");
         return PRT_RETURN_FALSE; /* conection closed */
+    }
 
     if ( r != MI_RESULT_OK && r != MI_RESULT_WOULD_BLOCK )
+    {
+        trace_HTTP_SupplimentaryInfo("ethan _ReadHeader _Sock_Read fail :(");
         return PRT_RETURN_FALSE;
+    }
 
     if (!received)
         return PRT_RETURN_TRUE;
@@ -518,7 +537,10 @@ static Http_CallbackResult _ReadHeader(
             buf = PAL_Realloc(handler->recvBuffer, handler->recvBufferSize * 2);
 
             if (!buf)
+	    {
+                trace_HTTP_SupplimentaryInfo("ethan _ReadHeader PAL_Realloc failure");
                 return PRT_RETURN_FALSE;
+	    }
 
             handler->recvBufferSize *= 2;
             handler->recvBuffer = buf;
@@ -537,13 +559,19 @@ static Http_CallbackResult _ReadHeader(
     data = buf + index + 1; /* pointer to data in case we got some */
 
     if (!_getHeaderField(handler, &currentLine, ' '))
+    {
+        trace_HTTP_SupplimentaryInfo("ethan _ReadHeader barf");
         return PRT_RETURN_FALSE;
+    }
 
 
     while ((data-currentLine) > 3)
     {
         if (!_getHeaderField(handler, &currentLine, ':'))
+	{
+            trace_HTTP_SupplimentaryInfo("ethan _ReadHeader barf");
             return PRT_RETURN_FALSE;
+	}
 
     }
 
@@ -563,7 +591,10 @@ static Http_CallbackResult _ReadHeader(
     }
 
     if (!handler->recvPage)
+    {
+        trace_HTTP_SupplimentaryInfo("ethan _ReadHeader barf");
         return PRT_RETURN_FALSE;
+    }
 
     ((char*)(handler->recvPage + 1))[handler->recvHeaders.contentLength] = 0;
 
@@ -593,6 +624,7 @@ static Http_CallbackResult _ReadData(
     size_t buf_size, received;
     MI_Result r;
 
+    trace_HTTP_SupplimentaryInfo("ethan entering _ReadData");
     /* are we in the right state? */
     if (handler->recvingState != RECV_STATE_CONTENT)
         return PRT_RETURN_FALSE;
@@ -1123,6 +1155,7 @@ static MI_Boolean _RequestCallback(
     {
         if (!_RequestCallbackRead(handler))
         {
+            trace_HTTP_SupplimentaryInfo("ethan failure is here!!");
             trace_RequestCallbackRead_Failed(ENGINE_TYPE, handler);
             return MI_FALSE;
         }
@@ -1456,6 +1489,7 @@ static MI_Boolean _ListenerCallback(
 
         h->handler.sock = s;
         h->handler.mask = SELECTOR_READ | SELECTOR_EXCEPTION;
+        /* TODO: this is where teh callback is setup that fails later */
         h->handler.callback = _RequestCallback;
         h->handler.data = self;
         h->handler.fireTimeoutAt = currentTimeUsec + self->options.timeoutUsec;

@@ -403,7 +403,7 @@ MI_Boolean Http_DecryptData(_In_ Http_SR_SocketData * handler, _Out_ HttpHeaders
     if (!(strncasecmp(pHeaders->contentType, MULTIPART_ENCRYPTED, MULTIPART_ENCRYPTED_LEN) == 0))
     {
         // Then its not encrypted. our job is done
-
+        trace_HTTP_SupplimentaryInfo("ethan improper content type sent from client");
         return TRUE;
     }
 
@@ -609,6 +609,7 @@ MI_Boolean Http_DecryptData(_In_ Http_SR_SocketData * handler, _Out_ HttpHeaders
     memcpy(page + 1, output_buffer.value, output_buffer.length);
     (*_g_gssState.Gss_Release_Buffer)(&min_stat, &output_buffer);
 
+    trace_HTTP_SupplimentaryInfo("ethan Http_DecryptData success");
     return MI_TRUE;
 }
 
@@ -1689,8 +1690,12 @@ static MI_Result _ServerAuthenticateCallback(PamCheckUserResp *msg)
     r = Process_Authorized_Message(handler);
     if (MI_RESULT_OK != r)
     {
+        trace_HTTP_SupplimentaryInfo("ethan auth failure!");
+        trace_HTTP_UserAuthFailed(headers->username);
         return MI_RESULT_FAILED;
     }
+    trace_HTTP_SupplimentaryInfo("ethan authenticated user");
+    trace_HTTP_SupplimentaryInfo(headers->username);
 
 Done:
     handler->recvPage = 0;
@@ -2292,6 +2297,7 @@ MI_Result Process_Authorized_Message(
 
     if( NULL == msg )
     {
+        trace_HTTP_SupplimentaryInfo("ethan Process_Authorized_Message message is NULL");
         trace_HTTP_RequestAllocFailed( handler );
 
         if (handler->recvPage)
@@ -2310,5 +2316,6 @@ MI_Result Process_Authorized_Message(
     handler->request = msg;
     Strand_ScheduleAux( &handler->strand, HTTPSOCKET_STRANDAUX_NEWREQUEST );
 
+    trace_HTTP_SupplimentaryInfo("ethan Process_Authorized_Message returning OK");
     return MI_RESULT_OK;
 }
