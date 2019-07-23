@@ -336,7 +336,12 @@ static int _GetSelector(
                     r = Instance_NewDynamic(instance, cn, MI_FLAG_CLASS, *batch);
 
                     if (MI_RESULT_OK != r)
+                    {
+                        // TODO: winrm interop debugging - may want more traces for Instance_NewDynamic failure modes
+                        // TODO: insert a logging command with the instance, cn, batch, etc
+                        trace_Agent_ProvMgrNewRequest_Failed(r);
                         RETURN(-1);
+                    }
                 }
 
                 /* add next property to the instance */
